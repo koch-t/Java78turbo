@@ -2,6 +2,7 @@ package nl.skywave.java78turbo;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.zip.GZIPInputStream;
 
@@ -41,7 +42,10 @@ public class ZeroMQclient {
 					}
 					String s = out.toString();
 					CTX c = new CTX(s);
-					System.out.println(c.rows.get(0).get("LinePlanningNumber"));
+					for (int i = 0; i < c.rows.size(); i++){
+						HashMap<String,String> row = c.rows.get(i);
+						System.out.println(row.get("LinePlanningNumber") + " " + row.get("TripStopStatus") + " " + row.get("ExpectedDepartureTime") + " " +row.get("TimingPointCode"));
+					}
 				}
 			}catch(Exception e){
 				e.printStackTrace();
