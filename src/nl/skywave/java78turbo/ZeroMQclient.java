@@ -20,39 +20,31 @@ public class ZeroMQclient {
 	public static void main(String[] args) throws IOException {
 		ZMQ.Context context = ZMQ.context(1);
 
-		// Connect to weather server
 		ZMQ.Socket subscriber = context.socket(ZMQ.SUB);
 		subscriber.connect("tcp://localhost:7817");
 		subscriber.subscribe("/GOVI/KV8".getBytes());
 
-		// Initialize poll set
-		ZMQ.Poller items = context.poller(2);
-		items.register(subscriber, ZMQ.Poller.POLLIN);
-
 		// Process messages from both sockets
 		while (true) {
-			items.poll();
-			if (items.pollin(1)) {
-				ZMsg msg = ZMsg.recvMsg(subscriber);
-				try{
-					Iterator<ZFrame> msgs = msg.iterator();
-					msgs.next();
-					while (msgs.hasNext()){
-						byte[] data = msgs.next().getData();
-						InputStream gzipped = new ByteArrayInputStream(data);
-						InputStream in = new GZIPInputStream(gzipped);
-						StringBuffer out = new StringBuffer();
-						byte[] b = new byte[4096];
-						for (int n; (n = in.read(b)) != -1;) {
-							out.append(new String(b, 0, n));
-						}
-						String s = out.toString();
-						CTX c = new CTX(s);
-						System.out.println(c.rows.get(0).get("LinePlanningNumber"));
+			ZMsg msg = ZMsg.recvMsg(subscriber);
+			try{
+				Iterator<ZFrame> msgs = msg.iterator();
+				msgs.next();
+				while (msgs.hasNext()){
+					byte[] data = msgs.next().getData();
+					InputStream gzipped = new ByteArrayInputStream(data);
+					InputStream in = new GZIPInputStream(gzipped);
+					StringBuffer out = new StringBuffer();
+					byte[] b = new byte[4096];
+					for (int n; (n = in.read(b)) != -1;) {
+						out.append(new String(b, 0, n));
 					}
-				}catch(Exception e){
-					e.printStackTrace();
+					String s = out.toString();
+					CTX c = new CTX(s);
+					System.out.println(c.rows.get(0).get("LinePlanningNumber"));
 				}
+			}catch(Exception e){
+				e.printStackTrace();
 			}
 		}
 	}
