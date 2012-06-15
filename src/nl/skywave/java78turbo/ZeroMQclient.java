@@ -2,8 +2,11 @@ package nl.skywave.java78turbo;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.zip.GZIPInputStream;
 
 import org.zeromq.ZFrame;
@@ -11,10 +14,8 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMsg;
 
 //
-// Reading from multiple sockets in Java
-// This version uses ZMQ.Poller
+// Java example on how to receive messages from OpenOV's KV78turbo ZeroMQ pubsub and parse the receiving CTX
 //
-// Nicola Peduzzi <thenikso@gmail.com>
 //
 public class ZeroMQclient {
 
@@ -25,28 +26,35 @@ public class ZeroMQclient {
 		subscriber.connect("tcp://localhost:7817");
 		subscriber.subscribe("/GOVI/KV8".getBytes());
 
-		// Process messages from both sockets
 		while (true) {
 			ZMsg msg = ZMsg.recvMsg(subscriber);
 			try{
 				Iterator<ZFrame> msgs = msg.iterator();
 				msgs.next();
+				ArrayList<Byte> receivedMsgs = new ArrayList<Byte>();
 				while (msgs.hasNext()){
-					byte[] data = msgs.next().getData();
-					InputStream gzipped = new ByteArrayInputStream(data);
-					InputStream in = new GZIPInputStream(gzipped);
-					StringBuffer out = new StringBuffer();
-					byte[] b = new byte[4096];
-					for (int n; (n = in.read(b)) != -1;) {
-						out.append(new String(b, 0, n));
-					}
-					String s = out.toString();
-					CTX c = new CTX(s);
-					for (int i = 0; i < c.rows.size(); i++){
-						HashMap<String,String> row = c.rows.get(i);
-						System.out.println(row.get("LinePlanningNumber") + " " + row.get("TripStopStatus") + " " + row.get("ExpectedDepartureTime") + " " +row.get("TimingPointCode"));
+					for (byte b : msgs.next().getData()){
+						receivedMsgs.add(b);
 					}
 				}
+				byte[] fullMsg = new byte[receivedMsgs.size()];
+				for (int i = 0; i < fullMsg.length; i++){
+					fullMsg[i] = receivedMsgs.get(i);
+				}
+				InputStream gzipped = new ByteArrayInputStream(fullMsg);
+				InputStream in = new GZIPInputStream(gzipped);
+				StringBuffer out = new StringBuffer();
+				byte[] b = new byte[4096];
+				for (int n; (n = in.read(b)) != -1;) {
+					out.append(new String(b, 0, n));
+				}
+				String s = out.toString();
+				CTX c = new CTX(s);
+				for (int i = 0; i < c.rows.size(); i++){
+					HashMap<String,String> row = c.rows.get(i);
+					System.out.println(row.get("LinePlanningNumber") + " " + row.get("TripStopStatus") + " " + row.get("ExpectedDepartureTime") + " " +row.get("TimingPointCode"));
+				}
+
 			}catch(Exception e){
 				e.printStackTrace();
 			}
